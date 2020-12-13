@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <title>Login Page</title>
+        <link rel="stylesheet" type="text/css" href="w3.css">
+	  <!-- The core Firebase JS SDK is always required and must be listed first -->
+  <script src="https://www.gstatic.com/firebasejs/8.1.2/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.1.2/firebase-firestore.js"></script>
+
+  <!-- TODO: Add SDKs for Firebase products that you want to use
+     https://firebase.google.com/docs/web/setup#available-libraries -->
+  <script src="https://www.gstatic.com/firebasejs/8.1.2/firebase-analytics.js"></script>
+
+    </head>
+    
+    <body>
+        <div class="w3-card-4 w3-dark-grey">
+
+        <div id="login" class="w3-container w3-center">
+          <h3>Inserisci il tuo Nome
+              <input type="text" name="nameField" id="nameField"/> 
+	      <div>e quindi scegli il tuo Avatar(lei o lui)</div>
+        </h3>
+          <!--img src="img_he.png" alt="Avatar" style="width:40%"-->
+          <h5>
+          <input type="image" src="img_lei.png" onclick='enterChatroom("lei")' style="width:33%"/>
+          <input type="image" src="img_lui.png" onclick='enterChatroom("lui")' style="width:33%"/>
+
+         <!--button class="w3-button w3-green"  onclick='enterChatroom("he")'>Chat</button-->
+              </h5>
+        </div>
+
+</div>
+
+<div id="chatRoom" class="w3-container w3-center" style="display:none">
+<div class="w3-row w3-white" style="margin-left: 22px; padding-top: 44px; margin-right: 22px">
+<!--div class="w3-card-4 xtest w3-col m8"-->
+<div class="w3-card-4">
+<header class="w3-container sex">
+	<div id="userList" style="white-space: nowrap"><h4>User List: </h4></div>
+</header>
+<div class="w3-container" style="overflow:auto; height:400px;">
+<p id="chatBox"></p>
+</div>
+
+<footer class="w3-container sex">
+<div style="white-space: nowrap; width: 100%;">
+    <div style="display:inline-block"><img id="avatar" src="img_lei.png" alt="Avatar" height="40" width="40"><span id="myName">???</span></div>
+  <input name="usermsg" type="text" id="usermsg" style="display:inline-block; width: 50%;" onkeypress="return onEnterSendMessage(event)"/>
+  <button class="w3-button w3-green" onclick="onSendMessage()" style="display:inline-block"/>Send</button>
+  <button class="w3-button w3-red" onclick="exit()" style="display:inline-block">Exit</button>
+</div>
+</footer>
+
+</div>
+</div>
+</div>
+
+<script> 
+
+//----------------------------------------------------------
+//-------------  Fire Store by Google ----------------------
+  // Your web app's Firebase configuration
+  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+  var firebaseConfig = {
+    apiKey: "AIzaSyAKV_KaysNCrbw2zNMpYon4vWYcQViov70",
+    authDomain: "memoryhighscore.firebaseapp.com",
+    projectId: "memoryhighscore",
+    storageBucket: "memoryhighscore.appspot.com",
+    messagingSenderId: "476001605598",
+    appId: "1:476001605598:web:d12a9b690f1cb3fdf7af4f",
+    measurementId: "G-3B0ERRJ803"
+  };
+  // Initialize Firebase
+  firebase.initializeApp(firebaseConfig);
+  firebase.analytics();
+
+  console.log("firebase initialized");
+
+//--------------------------------------------------------------------------
+    const login = document.querySelector("#login");
+    const chatRoom = document.querySelector("#chatRoom");
+    const avatar = document.querySelector("#avatar");
+    const myNameElm = document.querySelector("#myName");
+    const sexElms = document.querySelectorAll(".sex");
+    const userList = document.querySelector("#userList");
+    const userMessage = document.querySelector("#usermsg");
+    const MSG = document.getElementById("chatBox");
+
+    var ul = {};
+    var mySex = "???";
+    var myName = "???";
+
+
+
+  var firestore = firebase.firestore();
+  console.log("firestore reference created");
+
+  const chatRef = firestore.doc("memoryGame/chat"); //memory is a collection and chat is the document
+  const userListRef = firestore.doc("memoryGame/userList"); //memory is a collection and userList is the document
+
+  getRealTimeUpdates = function() {
+        console.log("listening for DOC changes");
+
+        chatRef.onSnapshot(function(doc) {
+          console.log("changes detected!");
+          if(doc && doc.exists) {
+              const myData = doc.data();
+              console.log("new msg: "+JSON.stringify(myData));
+	      if(Object.entries(myData).length !== 0)
+		  MSG.innerHTML += myData.msg;
+          }
+        });
+
+        userListRef.onSnapshot(function(doc) {
+          console.log("changes detected!");
+          if(doc && doc.exists) {
+              ul = doc.data();
+              console.log("UL received: "+JSON.stringify(ul));
+	      updateUserList();
+          }
+        });
+  }
+  getRealTimeUpdates();
+//--------------------------------------------------------------------------
+//document.addEventListener('DOMContentLoaded', () => {
+    function addUser() {
+
+	userListRef.get().then(function(doc) {
+	  if(doc && doc.exists) {
+
+	        ul = doc.data();
+	        console.log("ul: "+JSON.stringify(ul));
+		//if(Object.entries(ul).length === 0) ul = { userList: [] }; 
+
+	  	ul[myName] = mySex;
+	  	console.log(JSON.stringify(ul));
+
+  	  	userListRef.set(ul, { merge: true }).then(function() {
+  	  	      console.log("Saved to User List!");
+  	  	}).catch(function(error) {
+  	  	      console.log("Error: ", error);
+  	  	});
+
+	  }
+	}).catch(function(error) {
+	      console.log("Error: ", error);
+	});
+    }
+
+
+    function updateUserList() {
+	let ULdisplay = "";
+	console.log("updating User List: "+JSON.stringify(ul));
+	for(const member in ul) {
+	  console.log("adding: "+member);
+   	  if(ul[member] == "lei") 
+	    ULdisplay += '<span><img src="img_lei.png" height="40" width="40"> '+member+'</span>';
+   	  else 
+	    ULdisplay += '<span><img src="img_lui.png" height="40" width="40"> '+member+'</span>';
+
+	}
+	console.log(ULdisplay);
+	userList.innerHTML = "<span>User List: </span>" + ULdisplay;
+    }
+
+    function enterChatroom(sex){
+
+	mySex = sex;
+	myName= document.getElementById("nameField").value;
+
+	addUser();
+	sexElms.forEach(function(elm) {
+	  if(sex == "lui") {
+		elm.className += " w3-blue";
+		avatar.setAttribute("src", "img_lui.png");
+	  } else {
+		elm.className += " w3-pink";
+		avatar.setAttribute("src", "img_lei.png");
+	  }
+	});
+	//var xhttp = new XMLHttpRequest();
+	if(myName == "") {
+	    alert("assicurati di aver inserito il Nick!");
+	} else {
+	    login.style.display = "none";
+	    chatRoom.style.display = "block";
+	}
+	myNameElm.innerHTML = myName;
+        }
+
+	function exit() {
+	    sendMessage("Bye I have left the Chat");
+	    login.style.display = "block";
+	    chatRoom.style.display = "none";
+
+	    console.log("Leaving the Chat: "+myName+" new UL: "+JSON.stringify(ul));
+  	    userListRef.update({
+    		[myName]: firebase.firestore.FieldValue.delete()
+}).then(function() {
+  	          console.log("Saved to User List!");
+  	          chatRef.update({
+	                msg: firebase.firestore.FieldValue.delete()
+	          }); 
+  	    }).catch(function(error) {
+  	          console.log("Error: ", error);
+  	    });
+	    window.location.reload(false); 
+
+	}
+
+	function onSendMessage() {
+	  let msg = userMessage.value;
+	  sendMessage(msg);
+	  userMessage.value = "";
+	}
+
+	function sendMessage(msg) {
+	  console.log("message: "+msg);
+	  if(mySex == "lui") 
+	    msg = '<div style="text-align:left; background-color:lightblue">'+myName+": "+msg+"</div>"
+	  else
+	    msg = '<div style="text-align:left; background-color:pink">'+myName+': '+msg+"</div>"
+  	  chatRef.set({
+		  msg: msg
+  	  }, { merge: true }).then(function() {
+  	        console.log("Saved!");
+  	  }).catch(function(error) {
+  	        console.log("Error: ", error);
+  	  });
+	}
+
+	// Automatically indent the Chat Window
+	function overflowFix(){
+	    var element = document.getElementById("chatBox");
+	    element.scrollTop = element.scrollHeight;
+	}
+	
+	//quando viene premuto il tasto ENTER/INVIO su tastiera, invia messaggio
+	function onEnterSendMessage(e) {
+	    if (e.keyCode === 13) {
+	        onSendMessage();
+	        return false;
+	    }
+  	}
+	
+//});
+window.onbeforeunload = function(){
+   exit();
+}
+        </script>
+
+    </body>
+    
+</html>
+
